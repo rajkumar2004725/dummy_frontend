@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -6,6 +5,7 @@ import Footer from '@/components/Footer';
 import Button from '@/components/Button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import WalletConnectDialog from '@/components/WalletConnectDialog';
 import { Heart, Send, Copy, Check, Gift, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +19,7 @@ const CreateGift = () => {
   const [secretCode, setSecretCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -124,7 +125,7 @@ const CreateGift = () => {
                         fullWidth
                         className="h-14 text-lg bg-gray-100 dark:bg-gray-800"
                         icon={<Wallet className="w-5 h-5" />}
-                        onClick={() => toast.info('Connect wallet feature coming soon!')}
+                        onClick={() => setWalletDialogOpen(true)}
                       >
                         Connect a Wallet
                       </Button>
@@ -327,6 +328,11 @@ const CreateGift = () => {
       </div>
       
       <Footer />
+      
+      <WalletConnectDialog 
+        open={walletDialogOpen} 
+        onOpenChange={setWalletDialogOpen} 
+      />
     </div>
   );
 };
