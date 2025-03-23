@@ -6,11 +6,11 @@ import Footer from '@/components/Footer';
 import Button from '@/components/Button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Heart, Send, Copy, Check, Gift } from 'lucide-react';
+import { Heart, Send, Copy, Check, Gift, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CreateGift = () => {
-  const [step, setStep] = useState(1);
+  const [view, setView] = useState('options'); // 'options', 'form', 'success'
   const [giftDetails, setGiftDetails] = useState({
     recipientName: '',
     yourName: '',
@@ -45,7 +45,7 @@ const CreateGift = () => {
       const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       setSecretCode(generatedCode);
       setLoading(false);
-      setStep(2);
+      setView('success');
     }, 1500);
   };
   
@@ -66,7 +66,7 @@ const CreateGift = () => {
       message: '',
     });
     setSecretCode('');
-    setStep(1);
+    setView('options');
   };
   
   return (
@@ -76,7 +76,89 @@ const CreateGift = () => {
       <div className="flex-1 pt-32 pb-24">
         <div className="content-container">
           <div className="max-w-2xl mx-auto">
-            {step === 1 ? (
+            {view === 'options' ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="text-center mb-16">
+                  <div className="w-20 h-20 mx-auto mb-6 relative">
+                    <div className="absolute inset-0 bg-secondary/20 rounded-full animate-pulse-slow" />
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <Gift className="w-10 h-10 text-secondary" />
+                    </div>
+                  </div>
+                  
+                  <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3">
+                    Create a Gift Pack
+                  </h1>
+                </div>
+                
+                <div className="flex flex-col items-center space-y-6">
+                  <div className="w-full flex justify-center gap-4">
+                    <motion.div 
+                      whileHover={{ y: -5 }}
+                      className="flex-1 max-w-xs"
+                    >
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        className="h-14 text-lg"
+                        icon={<Wallet className="w-5 h-5" />}
+                        onClick={() => toast.info('Create wallet feature coming soon!')}
+                      >
+                        Create a Wallet
+                      </Button>
+                    </motion.div>
+                    
+                    <motion.div 
+                      whileHover={{ y: -5 }}
+                      className="flex-1 max-w-xs"
+                    >
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        fullWidth
+                        className="h-14 text-lg bg-gray-100 dark:bg-gray-800"
+                        icon={<Wallet className="w-5 h-5" />}
+                        onClick={() => toast.info('Connect wallet feature coming soon!')}
+                      >
+                        Connect a Wallet
+                      </Button>
+                    </motion.div>
+                  </div>
+                  
+                  <div className="text-center text-sm text-muted-foreground">
+                    Create a wallet with <span className="font-medium">Face ID</span> or <span className="font-medium">Touch ID</span>
+                  </div>
+                  
+                  <div className="pt-16 pb-8 w-full">
+                    <h2 className="text-2xl font-display font-medium text-center mb-10">
+                      Create a Gift Pack
+                    </h2>
+                    
+                    <motion.div 
+                      whileHover={{ y: -5 }}
+                      className="max-w-xs mx-auto"
+                    >
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        fullWidth
+                        className="h-14 text-lg"
+                        icon={<Gift className="w-5 h-5" />}
+                        onClick={() => setView('form')}
+                      >
+                        Create Gift Pack
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : view === 'form' ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -143,14 +225,24 @@ const CreateGift = () => {
                       </div>
                     </div>
                     
-                    <Button 
-                      type="submit" 
-                      fullWidth 
-                      loading={loading}
-                      icon={<Send className="w-4 h-4" />}
-                    >
-                      {loading ? 'Creating Gift...' : 'Create Gift'}
-                    </Button>
+                    <div className="flex gap-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setView('options')} 
+                        className="flex-1"
+                      >
+                        Back
+                      </Button>
+                      
+                      <Button 
+                        type="submit" 
+                        loading={loading}
+                        icon={<Send className="w-4 h-4" />}
+                        className="flex-1"
+                      >
+                        {loading ? 'Creating Gift...' : 'Create Gift'}
+                      </Button>
+                    </div>
                   </form>
                 </div>
               </motion.div>
