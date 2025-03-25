@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X, Wallet } from 'lucide-react';
@@ -9,6 +8,8 @@ interface WalletOption {
   name: string;
   logo: string;
   status?: 'recommended' | 'installed';
+  downloadUrl: string;
+  description?: string;
 }
 
 interface WalletConnectDialogProps {
@@ -21,28 +22,38 @@ const walletOptions: WalletOption[] = [
     id: 'coinbase',
     name: 'Coinbase Wallet',
     logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png',
-    status: 'recommended'
+    status: 'recommended',
+    downloadUrl: 'https://www.coinbase.com/wallet',
+    description: 'Secure crypto wallet for storing and trading crypto'
   },
   {
     id: 'brave',
     name: 'Brave Wallet',
     logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png',
-    status: 'installed'
+    status: 'installed',
+    downloadUrl: 'https://brave.com/wallet/',
+    description: 'Built into the Brave browser'
   },
   {
     id: 'metamask',
     name: 'MetaMask',
-    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png'
+    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png',
+    downloadUrl: 'https://metamask.io/download/',
+    description: 'The most popular Web3 wallet'
   },
   {
     id: 'rainbow',
     name: 'Rainbow',
-    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png'
+    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png',
+    downloadUrl: 'https://rainbow.me/',
+    description: 'Beautiful, simple, and secure'
   },
   {
     id: 'walletconnect',
     name: 'WalletConnect',
-    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png'
+    logo: '/lovable-uploads/f6a6f43f-d2ee-4ba6-83c1-8c143386d6f5.png',
+    downloadUrl: 'https://walletconnect.com/',
+    description: 'Connect to any wallet'
   }
 ];
 
@@ -60,12 +71,6 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
             </div>
             <h2 className="text-xl font-bold">Connect to Onchain Gift</h2>
           </div>
-          <button 
-            onClick={() => onOpenChange(false)}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
         
         <div className="max-h-[60vh] overflow-y-auto">
@@ -75,8 +80,7 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
                 key={wallet.id}
                 className="flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left"
                 onClick={() => {
-                  // Placeholder for wallet connection logic
-                  console.log(`Connecting to ${wallet.name}`);
+                  window.open(wallet.downloadUrl, '_blank');
                 }}
               >
                 <div className="bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
@@ -106,6 +110,9 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
                 </div>
                 <div>
                   <div className="font-semibold">{wallet.name}</div>
+                  {wallet.description && (
+                    <div className="text-sm text-gray-400">{wallet.description}</div>
+                  )}
                   {wallet.status && (
                     <div className={cn(
                       "text-sm",
@@ -120,12 +127,14 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
             
             <button
               className="flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left"
+              onClick={() => window.open('https://ethereum.org/en/wallets/find-wallet/', '_blank')}
             >
               <div className="bg-gray-700 w-12 h-12 rounded-lg flex items-center justify-center">
                 <div className="text-gray-400 text-2xl">••</div>
               </div>
               <div className="flex-1">
                 <div className="font-semibold">All Wallets</div>
+                <div className="text-sm text-gray-400">Browse all available wallets</div>
               </div>
               <div className="text-sm text-gray-500 px-2 py-0.5 bg-gray-800 rounded">500+</div>
             </button>
@@ -134,7 +143,12 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
         
         <div className="p-4 border-t border-gray-800 flex justify-between items-center">
           <div className="text-gray-400">New to wallets?</div>
-          <button className="text-blue-400 font-medium">Get started</button>
+          <button 
+            className="text-blue-400 font-medium"
+            onClick={() => window.open('https://ethereum.org/en/learn/', '_blank')}
+          >
+            Get started
+          </button>
         </div>
       </DialogContent>
     </Dialog>

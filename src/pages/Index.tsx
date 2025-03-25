@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -37,13 +36,19 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen flex flex-col bg-[#0A0B14] relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 grid-pattern opacity-10"></div>
+      <div className="absolute inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent"></div>
+      
+      {/* Floating Elements */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse-slow"></div>
+      <div className="absolute top-40 right-20 w-72 h-72 bg-secondary/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse-slow delay-1000"></div>
+
       <Navbar />
       
       {/* Hero Section */}
       <section className="pt-32 pb-20 overflow-hidden relative">
-        <div className="absolute top-0 left-0 right-0 h-[600px] bg-gradient-radial from-primary/5 to-transparent -z-10" />
-        
         <div className="content-container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <motion.div 
@@ -56,24 +61,24 @@ const Index = () => {
             >
               <div className="inline-block animate-float">
                 <div className="w-20 h-20 mx-auto mb-6 relative">
-                  <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse-slow" />
+                  <div className="absolute inset-0 bg-secondary/30 rounded-full animate-pulse-slow" />
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <Gift className="w-10 h-10 text-primary" />
+                    <Gift className="w-10 h-10 text-white" />
                   </div>
                 </div>
               </div>
               
               <motion.h1 
-                className="text-4xl sm:text-5xl md:text-6xl font-display font-semibold tracking-tight"
+                className="text-4xl sm:text-5xl md:text-6xl font-display font-semibold tracking-tight text-white"
                 variants={fadeInUpVariants}
                 custom={1}
               >
                 Make Gift Giving 
-                <span className="block text-primary">Magical & Memorable</span>
+                <span className="block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Magical & Memorable</span>
               </motion.h1>
               
               <motion.p 
-                className="text-xl text-muted-foreground max-w-2xl mx-auto"
+                className="text-xl text-gray-300 max-w-2xl mx-auto"
                 variants={fadeInUpVariants}
                 custom={2}
               >
@@ -87,7 +92,8 @@ const Index = () => {
               >
                 <Button 
                   size="lg" 
-                  icon={<ArrowRight className="w-5 h-5" />} 
+                  icon={<ArrowRight className="w-5 h-5" />}
+                  className="bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white font-medium shadow-xl shadow-primary/20"
                   onClick={() => window.location.href = '/create'}
                 >
                   Create a Gift
@@ -96,6 +102,7 @@ const Index = () => {
                   size="lg" 
                   variant="outline" 
                   icon={<ArrowRight className="w-5 h-5" />}
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 font-medium shadow-xl"
                   onClick={() => window.location.href = '/claim'}
                 >
                   Claim a Gift
@@ -116,8 +123,8 @@ const Index = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4">How It Works</h2>
-              <p className="text-muted-foreground">The simplest way to share and receive gifts online</p>
+              <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4 text-white">How It Works</h2>
+              <p className="text-gray-300">The simplest way to share and receive gifts online</p>
             </motion.div>
           </div>
           
@@ -156,7 +163,7 @@ const Index = () => {
       </section>
       
       {/* How It Works Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-20 bg-white/5">
         <div className="content-container">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <motion.div
@@ -165,8 +172,8 @@ const Index = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4">Features</h2>
-              <p className="text-muted-foreground">Everything you need for perfect gift-giving experiences</p>
+              <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4 text-white">Features</h2>
+              <p className="text-gray-300">Everything you need for perfect gift-giving experiences</p>
             </motion.div>
           </div>
           
@@ -174,17 +181,19 @@ const Index = () => {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                className="glass-card p-6 rounded-xl"
+                className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-xl hover:bg-white/10 transition-colors"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-5 bg-${feature.color}-500/10`}>
-                  {feature.icon}
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-5 bg-gradient-to-br from-primary/20 to-secondary/20">
+                  {React.cloneElement(feature.icon, {
+                    className: `w-6 h-6 ${feature.color === 'primary' ? 'text-primary' : 'text-secondary'}`
+                  })}
                 </div>
-                <h3 className="text-xl font-medium mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+                <h3 className="text-xl font-medium mb-2 text-white">{feature.title}</h3>
+                <p className="text-gray-300">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -193,23 +202,24 @@ const Index = () => {
       
       {/* CTA Section */}
       <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-radial from-primary/5 to-transparent opacity-70 -z-10" />
+        <div className="absolute inset-0 bg-gradient-radial from-primary/10 to-transparent opacity-70 -z-10" />
         
         <div className="content-container relative z-10">
           <motion.div
-            className="max-w-3xl mx-auto text-center glass-card py-16 px-8 rounded-3xl"
+            className="max-w-3xl mx-auto text-center bg-white/5 backdrop-blur-xl border border-white/10 py-16 px-8 rounded-3xl"
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4">Ready to share some joy?</h2>
-            <p className="text-muted-foreground text-lg mb-8">
+            <h2 className="text-3xl sm:text-4xl font-display font-medium mb-4 text-white">Ready to share some joy?</h2>
+            <p className="text-gray-300 text-lg mb-8">
               Create your first gift pack and surprise someone special today.
             </p>
             <Button 
               size="lg" 
-              icon={<ArrowRight className="w-5 h-5" />} 
+              icon={<ArrowRight className="w-5 h-5" />}
+              className="bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white font-medium shadow-xl shadow-primary/20"
               onClick={() => window.location.href = '/create'}
             >
               Get Started Now

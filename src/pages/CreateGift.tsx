@@ -71,10 +71,18 @@ const CreateGift = () => {
   };
   
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen flex flex-col bg-[#0A0B14] relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 grid-pattern opacity-10"></div>
+      <div className="absolute inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent"></div>
+      
+      {/* Floating Elements */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse-slow"></div>
+      <div className="absolute top-40 right-20 w-72 h-72 bg-secondary/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse-slow delay-1000"></div>
+      
       <Navbar />
       
-      <div className="flex-1 pt-32 pb-24">
+      <div className="flex-1 pt-32 pb-24 relative z-10">
         <div className="content-container">
           <div className="max-w-2xl mx-auto">
             {view === 'options' ? (
@@ -86,13 +94,13 @@ const CreateGift = () => {
               >
                 <div className="text-center mb-16">
                   <div className="w-20 h-20 mx-auto mb-6 relative">
-                    <div className="absolute inset-0 bg-secondary/20 rounded-full animate-pulse-slow" />
+                    <div className="absolute inset-0 bg-secondary/30 rounded-full animate-pulse-slow" />
                     <div className="relative w-full h-full flex items-center justify-center">
-                      <Gift className="w-10 h-10 text-secondary" />
+                      <Gift className="w-10 h-10 text-white" />
                     </div>
                   </div>
                   
-                  <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3">
+                  <h1 className="text-4xl sm:text-5xl font-display font-medium mb-3 text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
                     Create a Gift Pack
                   </h1>
                 </div>
@@ -107,7 +115,7 @@ const CreateGift = () => {
                         variant="primary"
                         size="lg"
                         fullWidth
-                        className="h-14 text-lg"
+                        className="h-14 text-lg bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white font-medium shadow-xl shadow-primary/20"
                         icon={<Wallet className="w-5 h-5" />}
                         onClick={() => toast.info('Create wallet feature coming soon!')}
                       >
@@ -123,7 +131,7 @@ const CreateGift = () => {
                         variant="outline"
                         size="lg"
                         fullWidth
-                        className="h-14 text-lg bg-gray-100 dark:bg-gray-800"
+                        className="h-14 text-lg border-white/30 bg-white/10 text-white hover:bg-white/20 font-medium shadow-xl"
                         icon={<Wallet className="w-5 h-5" />}
                         onClick={() => setWalletDialogOpen(true)}
                       >
@@ -132,13 +140,13 @@ const CreateGift = () => {
                     </motion.div>
                   </div>
                   
-                  <div className="text-center text-sm text-muted-foreground">
-                    Create a wallet with <span className="font-medium">Face ID</span> or <span className="font-medium">Touch ID</span>
+                  <div className="text-center text-base text-white/80">
+                    Create a wallet with <span className="font-medium text-white">Face ID</span> or <span className="font-medium text-white">Touch ID</span>
                   </div>
                   
                   <div className="pt-16 pb-8 w-full">
-                    <h2 className="text-2xl font-display font-medium text-center mb-10">
-                      Create a Gift Pack
+                    <h2 className="text-3xl font-display font-medium text-center mb-10 text-white">
+                      Make Gift Giving Special
                     </h2>
                     
                     <motion.div 
@@ -149,7 +157,7 @@ const CreateGift = () => {
                         variant="secondary"
                         size="lg"
                         fullWidth
-                        className="h-14 text-lg"
+                        className="h-14 text-lg bg-gradient-to-r from-secondary/90 to-primary/90 hover:from-secondary hover:to-primary text-white font-medium shadow-xl shadow-secondary/20"
                         icon={<Gift className="w-5 h-5" />}
                         onClick={() => setView('form')}
                       >
@@ -174,10 +182,10 @@ const CreateGift = () => {
                     </div>
                   </div>
                   
-                  <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3">
+                  <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3 text-white">
                     Create a Gift
                   </h1>
-                  <p className="text-muted-foreground">
+                  <p className="text-gray-300">
                     Send a special gift with a personalized message
                   </p>
                 </div>
@@ -186,7 +194,7 @@ const CreateGift = () => {
                   <form onSubmit={handleCreateGift} className="space-y-6">
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="recipientName" className="block text-sm font-medium mb-1">
+                        <label htmlFor="recipientName" className="block text-sm font-medium mb-1 text-gray-300">
                           Recipient's Name
                         </label>
                         <Input
@@ -195,11 +203,12 @@ const CreateGift = () => {
                           placeholder="Who's this gift for?"
                           value={giftDetails.recipientName}
                           onChange={handleInputChange}
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                         />
                       </div>
                       
                       <div>
-                        <label htmlFor="yourName" className="block text-sm font-medium mb-1">
+                        <label htmlFor="yourName" className="block text-sm font-medium mb-1 text-gray-300">
                           Your Name
                         </label>
                         <Input
@@ -208,11 +217,12 @@ const CreateGift = () => {
                           placeholder="Who's this gift from?"
                           value={giftDetails.yourName}
                           onChange={handleInputChange}
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                         />
                       </div>
                       
                       <div>
-                        <label htmlFor="message" className="block text-sm font-medium mb-1">
+                        <label htmlFor="message" className="block text-sm font-medium mb-1 text-gray-300">
                           Your Message
                         </label>
                         <Textarea
@@ -222,6 +232,7 @@ const CreateGift = () => {
                           rows={5}
                           value={giftDetails.message}
                           onChange={handleInputChange}
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                         />
                       </div>
                     </div>
@@ -230,7 +241,7 @@ const CreateGift = () => {
                       <Button 
                         variant="outline" 
                         onClick={() => setView('options')} 
-                        className="flex-1"
+                        className="flex-1 border-white/20 bg-white/5 text-white hover:bg-white/10"
                       >
                         Back
                       </Button>
@@ -239,7 +250,7 @@ const CreateGift = () => {
                         type="submit" 
                         loading={loading}
                         icon={<Send className="w-4 h-4" />}
-                        className="flex-1"
+                        className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
                       >
                         {loading ? 'Creating Gift...' : 'Create Gift'}
                       </Button>
@@ -268,54 +279,59 @@ const CreateGift = () => {
                   </motion.div>
                   
                   <div className="space-y-2">
-                    <h2 className="text-3xl font-display font-medium">Gift Created!</h2>
-                    <p className="text-muted-foreground max-w-md mx-auto">
+                    <h2 className="text-3xl font-display font-medium text-white">Gift Created!</h2>
+                    <p className="text-gray-300 max-w-md mx-auto">
                       Share this secret code with {giftDetails.recipientName} so they can claim their gift.
                     </p>
                   </div>
                   
                   <div className="max-w-sm mx-auto">
                     <div 
-                      className="p-4 bg-muted rounded-lg font-mono text-xl flex items-center justify-between"
+                      className="p-4 bg-white/5 border border-white/10 rounded-lg font-mono text-xl flex items-center justify-between text-white"
                       role="button"
                       onClick={copyToClipboard}
                     >
                       <span>{secretCode}</span>
                       <button 
                         type="button" 
-                        className="p-2 hover:bg-background rounded-md transition-colors"
+                        className="p-2 hover:bg-white/10 rounded-md transition-colors"
                         aria-label="Copy to clipboard"
                       >
                         {copied ? (
-                          <Check className="w-5 h-5 text-green-500" />
+                          <Check className="w-5 h-5 text-green-400" />
                         ) : (
-                          <Copy className="w-5 h-5" />
+                          <Copy className="w-5 h-5 text-white" />
                         )}
                       </button>
                     </div>
                   </div>
                   
-                  <div className="p-6 bg-muted/50 rounded-lg max-w-md mx-auto text-left">
-                    <p className="text-sm text-muted-foreground mb-2">Gift Preview:</p>
-                    <p className="text-base">
-                      <span className="font-medium">To:</span> {giftDetails.recipientName}
+                  <div className="p-6 bg-white/5 border border-white/10 rounded-lg max-w-md mx-auto text-left">
+                    <p className="text-sm text-gray-400 mb-2">Gift Preview:</p>
+                    <p className="text-base text-white">
+                      <span className="font-medium text-gray-300">To:</span> {giftDetails.recipientName}
                     </p>
-                    <p className="text-base">
-                      <span className="font-medium">From:</span> {giftDetails.yourName}
+                    <p className="text-base text-white">
+                      <span className="font-medium text-gray-300">From:</span> {giftDetails.yourName}
                     </p>
-                    <p className="text-base mt-2">
+                    <p className="text-base mt-2 text-white">
                       {giftDetails.message}
                     </p>
                   </div>
                   
                   <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
-                    <Button variant="outline" onClick={resetForm}>
+                    <Button 
+                      variant="outline" 
+                      onClick={resetForm}
+                      className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    >
                       Create Another Gift
                     </Button>
                     <Button 
                       variant="secondary" 
                       icon={<Copy className="w-4 h-4" />}
                       onClick={copyToClipboard}
+                      className="bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90"
                     >
                       {copied ? 'Copied!' : 'Copy Secret Code'}
                     </Button>
