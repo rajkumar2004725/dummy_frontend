@@ -27,7 +27,7 @@ async function main() {
   console.log("Wallet Balance:", ethers.formatEther(balance), "ETH");
 
   // Use the hardcoded tokenId for the 5th card
-  const tokenId = 5;
+  const tokenId = 8;
   console.log(`Using hardcoded Token ID: ${tokenId}`);
 
   // Step 1: Fetch the gift card price
