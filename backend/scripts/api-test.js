@@ -1,101 +1,108 @@
+const request = require("supertest");
 const axios = require("axios");
+const express = require("express");
+const app = require("../server"); // Adjust path if needed
 
 const API_URL = "http://localhost:3001";
 
-async function testNFTMarketplaceWorkflow() {
-  try {
-    console.log("🚀 Starting NFT Marketplace Workflow Tests...\n");
+describe("NFTGiftMarketplace API Endpoints", () => {
+  it("should return API running status", async () => {
+    const res = await request(app).get("/");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("success");
+  });
 
-    // Step 1: Artist Mints an NFT
-    console.log("Step 1: Minting an NFT with an image");
-    const mintData = {
-      tokenURI: "ipfs://QmExampleHashPhotography/metadata.json", // Replace with actual IPFS metadata URI
-      price: "0.0001", // Price in ETH
-    };
+  it("should fail minting gift card with missing fields", async () => {
+    const res = await request(app).post("/api/giftcard/mint").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
 
-    console.log("Request Data:", mintData);
-    const mintResponse = await axios.post(
-      `${API_URL}/api/giftcard/mint`,
-      mintData
-    );
-    console.log("✅ Mint NFT Response:", mintResponse.data);
-    console.log("----------------------------------------\n");
+  it("should successfully mint, buy, set secret, and claim NFT", async () => {
+    try {
+      console.log("\n🚀 Starting NFT Marketplace Workflow Tests...\n");
 
-    // Use the minted tokenId for further steps
-    const tokenId = mintResponse.data.tokenId; // Extract tokenId from the response
-    if (!tokenId) {
-      throw new Error(
-        "Token ID is undefined. Ensure the backend returns the tokenId."
+      // Step 1: Artist Mints an NFT
+      console.log("Step 1: Minting an NFT with an image");
+      const mintData = {
+        tokenURI: "ipfs://QmExampleHashPhotography/metadata.json", // Replace with actual IPFS metadata URI
+        price: "0.0001", // Price in ETH
+      };
+
+      const mintResponse = await axios.post(
+        `${API_URL}/api/giftcard/mint`,
+        mintData
       );
-    }
-    console.log(`Using minted Token ID: ${tokenId}`);
-    console.log("----------------------------------------\n");
+      expect(mintResponse.status).toBe(200);
+      expect(mintResponse.data.success).toBe(true);
+      expect(mintResponse.data.tokenId).toBeDefined();
 
-    // Step 2: User Buys the NFT
-    console.log("Step 2: Buying the NFT");
-    const buyCardData = {
-      tokenId: tokenId,
-      message: "Enjoy this beautiful artwork! 🎨", // Optional message
-      price: "0.0001",
-    };
+      const tokenId = mintResponse.data.tokenId;
+      console.log(`Minted Token ID: ${tokenId}\n`);
 
-    console.log("Request Data:", buyCardData);
-    const buyResponse = await axios.post(
-      `${API_URL}/api/giftcard/buy`,
-      buyCardData
-    );
-    console.log("✅ Buy NFT Response:", buyResponse.data);
-    console.log("----------------------------------------\n");
+      // Step 2: User Buys the NFT
+      console.log("Step 2: Buying the NFT");
+      const buyCardData = {
+        tokenId: tokenId,
+        message: "Enjoy this artwork! 🎨", // Optional message
+        price: "0.0001",
+      };
 
-    // Step 3: Buyer Sets a Secret Key (Optional)
-    console.log("Step 3: Setting a Secret Key for the NFT");
-    const secretKey = "my-secret-key"; // Secret key for the recipient
-    const setSecretData = {
-      tokenId: tokenId,
-      secret: secretKey,
-    };
+      const buyResponse = await axios.post(
+        `${API_URL}/api/giftcard/buy`,
+        buyCardData
+      );
+      expect(buyResponse.status).toBe(200);
+      expect(buyResponse.data.success).toBe(true);
 
-    console.log("Request Data:", setSecretData);
-    const setSecretResponse = await axios.post(
-      `${API_URL}/api/giftcard/set-secret`,
-      setSecretData
-    );
-    console.log("✅ Set Secret Key Response:", setSecretResponse.data);
-    console.log("----------------------------------------\n");
+      // Step 3: Buyer Sets a Secret Key (Optional)
+      console.log("Step 3: Setting a Secret Key for the NFT");
+      const secretKey = "my-secret-key";
+      const setSecretData = {
+        tokenId: tokenId,
+        secret: secretKey,
+      };
 
-    // Step 4: Recipient Claims the NFT
-    console.log("Step 4: Recipient Claims the NFT using the Secret Key");
-    const claimCardData = {
-      tokenId: tokenId,
-      secret: secretKey,
-    };
+      const setSecretResponse = await axios.post(
+        `${API_URL}/api/giftcard/set-secret`,
+        setSecretData
+      );
+      expect(setSecretResponse.status).toBe(200);
+      expect(setSecretResponse.data.success).toBe(true);
 
-    console.log("Request Data:", claimCardData);
-    const claimResponse = await axios.post(
-      `${API_URL}/api/giftcard/claim`,
-      claimCardData
-    );
-    console.log("✅ Claim NFT Response:", claimResponse.data);
-    console.log("----------------------------------------\n");
+      // Step 4: Recipient Claims the NFT
+      console.log("Step 4: Recipient Claims the NFT using the Secret Key");
+      const claimCardData = {
+        tokenId: tokenId,
+        secret: secretKey,
+      };
 
-    console.log("✨ All tests completed successfully!");
-  } catch (error) {
-    console.error(
-      "\n❌ Test failed:",
-      error.response ? error.response.data : error.message
-    );
-    if (
-      error.response &&
-      error.response.data.error &&
-      error.response.data.error.includes("INSUFFICIENT_FUNDS")
-    ) {
+      const claimResponse = await axios.post(
+        `${API_URL}/api/giftcard/claim`,
+        claimCardData
+      );
+      expect(claimResponse.status).toBe(200);
+      expect(claimResponse.data.success).toBe(true);
+
+      console.log("✨ All tests completed successfully!");
+    } catch (error) {
       console.error(
-        "\nPlease make sure you have enough Sepolia ETH in your wallet."
+        "\n❌ Test failed:",
+        error.response ? error.response.data : error.message
       );
-      console.error("You can get test ETH from the Sepolia faucet.");
+      throw error;
     }
-  }
-}
+  });
 
-// Run the tests
-testNFTMarketplaceWorkflow();
+  it("should fail setting secret key with missing fields", async () => {
+    const res = await request(app).post("/api/giftcard/set-secret").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should fail claiming gift card with missing fields", async () => {
+    const res = await request(app).post("/api/giftcard/claim").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+});
