@@ -6,101 +6,153 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract NFTGiftMarketplace is ERC721, ERC721URIStorage, Ownable {
+contract NFTGiftMarketplace is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
     using Address for address payable;
-    using ECDSA for bytes32;
 
-    Counters.Counter private _tokenIdCounter;
+    Counters.Counter private _backgroundIdCounter;
+    Counters.Counter private _giftCardIdCounter;
 
     struct GiftCard {
         address creator;
         address currentOwner;
         uint256 price;
-        bool forSale;
         string message;
         bytes32 secretHash;
+        uint256 backgroundId; // Reference to the background NFT
+        bool isClaimable; // Indicates if the gift card is claimable
     }
 
-    mapping(uint256 => GiftCard) public giftCards;
+    struct Background {
+        address artist;
+        string imageURI;
+        string category; // New field for category
+        uint256 usageCount;
+    }
+
+    mapping(uint256 => GiftCard) public giftCards; // Gift cards are stored in the contract
+    mapping(uint256 => Background) public backgrounds; // Background NFTs
     mapping(bytes32 => bool) private hashUsed;
 
-    event GiftCardMinted(uint256 indexed tokenId, address indexed creator, uint256 price);
-    event GiftCardPurchased(uint256 indexed tokenId, address indexed buyer, string message);
-    event GiftCardClaimed(uint256 indexed tokenId, address indexed recipient);
+    event BackgroundMinted(uint256 indexed backgroundId, address indexed artist, string imageURI, string category);
+    event GiftCardCreated(uint256 indexed giftCardId, address indexed creator, uint256 price, uint256 backgroundId);
+    event GiftCardPurchased(uint256 indexed giftCardId, address indexed buyer, string message);
+    event GiftCardTransferred(uint256 indexed giftCardId, address indexed from, address indexed to);
+    event GiftCardClaimed(uint256 indexed giftCardId, address indexed recipient);
 
-    constructor() ERC721("NFTGiftCard", "NGC") {}
+    constructor() ERC721("BackgroundNFT", "BGNFT") {}
 
-    function mintGiftCard(string memory _tokenURI, uint256 price) external {
-        _tokenIdCounter.increment();
-        uint256 tokenId = _tokenIdCounter.current();
-        _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, _tokenURI);
+    // Function to mint a background as an NFT with a category
+    function mintBackground(string memory imageURI, string memory category) external {
+        _backgroundIdCounter.increment();
+        uint256 backgroundId = _backgroundIdCounter.current();
 
-        giftCards[tokenId] = GiftCard({
+        _safeMint(msg.sender, backgroundId);
+        _setTokenURI(backgroundId, imageURI);
+
+        backgrounds[backgroundId] = Background({
+            artist: msg.sender,
+            imageURI: imageURI,
+            category: category, // Assign the category
+            usageCount: 0
+        });
+
+        emit BackgroundMinted(backgroundId, msg.sender, imageURI, category);
+    }
+
+    // Function to create a gift card using a background NFT
+    function createGiftCard(
+        uint256 backgroundId,
+        uint256 price,
+        string memory message
+    ) external {
+        require(ownerOf(backgroundId) != address(0), "Background does not exist");
+
+        _giftCardIdCounter.increment();
+        uint256 giftCardId = _giftCardIdCounter.current();
+
+        giftCards[giftCardId] = GiftCard({
             creator: msg.sender,
             currentOwner: msg.sender,
             price: price,
-            forSale: true,
-            message: "",
-            secretHash: 0
+            message: message,
+            secretHash: 0,
+            backgroundId: backgroundId,
+            isClaimable: false
         });
 
-        emit GiftCardMinted(tokenId, msg.sender, price);
+        backgrounds[backgroundId].usageCount++;
+
+        emit GiftCardCreated(giftCardId, msg.sender, price, backgroundId);
     }
 
-    function buyGiftCard(uint256 tokenId, string memory message) external payable {
-        GiftCard storage giftCard = giftCards[tokenId];
-        require(giftCard.forSale, "Gift card not for sale");
+    // Option 1: Directly send the gift card to another user's wallet
+    function transferGiftCard(uint256 giftCardId, address recipient) external {
+        GiftCard storage giftCard = giftCards[giftCardId];
+        require(giftCard.currentOwner == msg.sender, "Only the owner can transfer the gift card");
+        require(recipient != address(0), "Invalid recipient address");
+
+        giftCard.currentOwner = recipient;
+        giftCard.isClaimable = false; // Disable claimable mode since it's directly transferred
+
+        emit GiftCardTransferred(giftCardId, msg.sender, recipient);
+    }
+
+    // Option 2: Set a secret key for the gift card to make it claimable
+    function setSecretKey(uint256 giftCardId, string memory secret) external {
+        GiftCard storage giftCard = giftCards[giftCardId];
+        require(giftCard.currentOwner == msg.sender, "Only the owner can set the secret key");
+
+        bytes32 secretHash = keccak256(abi.encodePacked(secret));
+        require(!hashUsed[secretHash], "Secret already used");
+
+        hashUsed[secretHash] = true;
+        giftCard.secretHash = secretHash;
+        giftCard.isClaimable = true; // Enable claimable mode
+
+        emit GiftCardTransferred(giftCardId, msg.sender, address(0)); // Indicate it's claimable
+    }
+
+    // Function to claim a gift card using the secret key
+    function claimGiftCard(uint256 giftCardId, string memory secret) external {
+        GiftCard storage giftCard = giftCards[giftCardId];
+        require(giftCard.isClaimable, "Gift card is not claimable");
+        require(giftCard.secretHash == keccak256(abi.encodePacked(secret)), "Invalid secret");
+
+        giftCard.currentOwner = msg.sender;
+        giftCard.secretHash = 0; // Prevent reuse
+        giftCard.isClaimable = false; // Disable claimable mode after claiming
+
+        emit GiftCardClaimed(giftCardId, msg.sender);
+    }
+
+    // Function to buy a gift card
+    function buyGiftCard(uint256 giftCardId, string memory message) external payable {
+        GiftCard storage giftCard = giftCards[giftCardId];
         require(msg.value == giftCard.price, "Incorrect price");
 
         address payable seller = payable(giftCard.currentOwner);
-        uint256 artistShare = (msg.value * 40) / 100;
-        uint256 platformShare = msg.value - artistShare;
+        uint256 backgroundId = giftCard.backgroundId;
+        address payable artist = payable(ownerOf(backgroundId));
 
-        payable(giftCard.creator).sendValue(artistShare);
-        payable(owner()).sendValue(platformShare);
-        
-        _transfer(seller, msg.sender, tokenId);
+        uint256 artistShare = (msg.value * 40) / 100;
+        uint256 sellerShare = msg.value - artistShare;
+
+        artist.sendValue(artistShare);
+        seller.sendValue(sellerShare);
+
         giftCard.currentOwner = msg.sender;
-        giftCard.forSale = false;
         giftCard.message = message;
 
-        emit GiftCardPurchased(tokenId, msg.sender, message);
+        emit GiftCardPurchased(giftCardId, msg.sender, message);
     }
 
-    function setSecretKey(uint256 tokenId, string memory secret) external {
-        require(ownerOf(tokenId) == msg.sender, "Only owner can set secret key");
-        bytes32 secretHash = keccak256(abi.encodePacked(secret));
-        require(!hashUsed[secretHash], "Secret already used");
-        
-        hashUsed[secretHash] = true;
-        giftCards[tokenId].secretHash = secretHash;
-    }
-
-    function claimGiftCard(uint256 tokenId, string memory secret) external {
-        GiftCard storage giftCard = giftCards[tokenId];
-        require(giftCard.secretHash == keccak256(abi.encodePacked(secret)), "Invalid secret");
-        require(giftCard.currentOwner != address(0), "Invalid gift card");
-
-        _transfer(giftCard.currentOwner, msg.sender, tokenId);
-        giftCard.currentOwner = msg.sender;
-        giftCard.secretHash = 0; // Prevent reuse
-
-        emit GiftCardClaimed(tokenId, msg.sender);
-    }
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 tokenId) internal override(ERC721URIStorage) {
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
     }
 }
