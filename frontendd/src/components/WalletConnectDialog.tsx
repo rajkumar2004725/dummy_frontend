@@ -15,6 +15,7 @@ interface WalletOption {
 interface WalletConnectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onConnect?: (address: string) => void;
 }
 
 const walletOptions: WalletOption[] = [
@@ -59,8 +60,16 @@ const walletOptions: WalletOption[] = [
 
 const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
   open,
-  onOpenChange
+  onOpenChange,
+  onConnect
 }) => {
+  const handleWalletConnect = (wallet: WalletOption) => {
+    // TODO: Replace with actual wallet connection logic
+    const mockAddress = '0x2937...ee92';
+    onConnect?.(mockAddress);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-gray-900 text-white border-none p-0 max-w-md w-full overflow-hidden rounded-xl">
@@ -79,9 +88,7 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
               <button
                 key={wallet.id}
                 className="flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left"
-                onClick={() => {
-                  window.open(wallet.downloadUrl, '_blank');
-                }}
+                onClick={() => handleWalletConnect(wallet)}
               >
                 <div className="bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
                   {wallet.id === 'brave' ? (

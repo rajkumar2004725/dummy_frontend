@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Gift } from 'lucide-react';
+import { Gift, ShoppingBag } from 'lucide-react';
+import WalletConnectDialog from './WalletConnectDialog';
+import AccountMenu from './AccountMenu';
+import Button from './Button';
+import { useWallet } from '@/contexts/WalletContext';
 
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
+  const { address, connect } = useWallet();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -20,8 +26,15 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleConnect = (newAddress: string) => {
+    connect(newAddress);
+  };
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-white/10">
+    <nav className={cn(
+      "fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-white/10",
+      scrolled && "bg-black/50"
+    )}>
       <div className="content-container py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
@@ -33,13 +46,15 @@ const Navbar = () => {
               <Gift className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-display font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">OnChain-GiftPack</span>
-
           </Link>
           
           {/* Main Menu */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" active={location.pathname === "/"}>
               Home
+            </NavLink>
+            <NavLink to="/marketplace" active={location.pathname.startsWith("/marketplace")}>
+              Marketplace
             </NavLink>
             <NavLink to="/about" active={location.pathname === "/about"}>
               About Us
@@ -51,17 +66,25 @@ const Navbar = () => {
               Claim Gift
             </NavLink>
           </div>
-          
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+
+          {/* Wallet Connection */}
+          <div className="flex items-center gap-4">
+            {address ? (
+              <AccountMenu address={address} />
+            ) : (
+              <Button onClick={() => setWalletDialogOpen(true)}>
+                Connect Wallet
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
+      <WalletConnectDialog
+        open={walletDialogOpen}
+        onOpenChange={setWalletDialogOpen}
+        onConnect={handleConnect}
+      />
     </nav>
   );
 };
