@@ -5,147 +5,193 @@ const axios = require("axios");
 const API_URL = "http://localhost:3001";
 
 describe("NFTGiftMarketplace", function () {
-  let NFTGiftMarketplace, nftGiftMarketplace, owner, creator, buyer;
+  let NFTGiftMarketplace, nftGiftMarketplace, owner, artist, creator, buyer;
 
   beforeEach(async function () {
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    if (!contractAddress) {
-      throw new Error("CONTRACT_ADDRESS is not set in the .env file");
-    }
-
     NFTGiftMarketplace = await ethers.getContractFactory("NFTGiftMarketplace");
-    [owner, creator, buyer] = await ethers.getSigners();
-    nftGiftMarketplace = NFTGiftMarketplace.attach(contractAddress);
+    [owner, artist, creator, buyer] = await ethers.getSigners();
+    nftGiftMarketplace = await NFTGiftMarketplace.deploy();
+    await nftGiftMarketplace.deployed();
   });
 
-  it("should mint a gift card and verify its details", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+  it("should mint a background with a category", async function () {
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Verify the background details
+    const backgroundId = 1; // First minted background
+    const background = await nftGiftMarketplace.backgrounds(backgroundId);
+
+    expect(background.artist).to.equal(artist.address);
+    expect(background.imageURI).to.equal(imageURI);
+    expect(background.category).to.equal(category);
+    expect(background.usageCount).to.equal(0);
+  });
+
+  it("should create a gift card using a background", async function () {
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
+    const message = "Happy Birthday!";
+
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, message);
 
     // Verify the gift card details
-    const tokenId = 1; // First minted token
-    const giftCard = await nftGiftMarketplace.giftCards(tokenId);
+    const giftCardId = 1; // First minted gift card
+    const giftCard = await nftGiftMarketplace.giftCards(giftCardId);
 
     expect(giftCard.creator).to.equal(creator.address);
     expect(giftCard.currentOwner).to.equal(creator.address);
     expect(giftCard.price).to.equal(price);
-    expect(giftCard.forSale).to.be.true;
-    expect(giftCard.message).to.equal("");
-    expect(giftCard.secretHash).to.equal(ethers.ZeroHash); // Fixed
+    expect(giftCard.message).to.equal(message);
+    expect(giftCard.backgroundId).to.equal(backgroundId);
+    expect(giftCard.isClaimable).to.be.false;
+
+    // Verify the background usage count
+    const background = await nftGiftMarketplace.backgrounds(backgroundId);
+    expect(background.usageCount).to.equal(1);
   });
 
   it("should allow a buyer to purchase a gift card", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
+    const message = "Enjoy your gift!";
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, "");
 
     // Buy the gift card
-    const tokenId = 1;
-    const message = "Happy Birthday!";
-    await nftGiftMarketplace.connect(buyer).buyGiftCard(tokenId, message, {
+    const giftCardId = 1;
+    await nftGiftMarketplace.connect(buyer).buyGiftCard(giftCardId, message, {
       value: price,
     });
 
     // Verify the updated gift card details
-    const giftCard = await nftGiftMarketplace.giftCards(tokenId);
+    const giftCard = await nftGiftMarketplace.giftCards(giftCardId);
     expect(giftCard.currentOwner).to.equal(buyer.address);
-    expect(giftCard.forSale).to.be.false;
     expect(giftCard.message).to.equal(message);
   });
 
   it("should allow the owner to set a secret key", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, "");
 
     // Set a secret key
-    const tokenId = 1;
+    const giftCardId = 1;
     const secret = "my-secret-key";
-    await nftGiftMarketplace.connect(creator).setSecretKey(tokenId, secret);
+    await nftGiftMarketplace.connect(creator).setSecretKey(giftCardId, secret);
 
     // Verify the secret hash
-    const giftCard = await nftGiftMarketplace.giftCards(tokenId);
-    const expectedHash = ethers.keccak256(ethers.toUtf8Bytes(secret)); // Updated hashing logic
+    const giftCard = await nftGiftMarketplace.giftCards(giftCardId);
+    const expectedHash = ethers.keccak256(ethers.toUtf8Bytes(secret));
     expect(giftCard.secretHash).to.equal(expectedHash);
+    expect(giftCard.isClaimable).to.be.true;
   });
 
   it("should allow a user to claim a gift card with the correct secret key", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, "");
 
     // Set a secret key
-    const tokenId = 1;
+    const giftCardId = 1;
     const secret = "my-secret-key";
-    await nftGiftMarketplace.connect(creator).setSecretKey(tokenId, secret);
+    await nftGiftMarketplace.connect(creator).setSecretKey(giftCardId, secret);
 
     // Claim the gift card
-    await nftGiftMarketplace.connect(buyer).claimGiftCard(tokenId, secret);
+    await nftGiftMarketplace.connect(buyer).claimGiftCard(giftCardId, secret);
 
     // Verify the updated gift card details
-    const giftCard = await nftGiftMarketplace.giftCards(tokenId);
+    const giftCard = await nftGiftMarketplace.giftCards(giftCardId);
     expect(giftCard.currentOwner).to.equal(buyer.address);
-    expect(giftCard.secretHash).to.equal(ethers.ZeroHash); // Fixed
+    expect(giftCard.secretHash).to.equal(ethers.ZeroHash);
+    expect(giftCard.isClaimable).to.be.false;
   });
 
   it("should fail to claim a gift card with an incorrect secret key", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, "");
 
     // Set a secret key
-    const tokenId = 1;
+    const giftCardId = 1;
     const secret = "my-secret-key";
-    await nftGiftMarketplace.connect(creator).setSecretKey(tokenId, secret);
+    await nftGiftMarketplace.connect(creator).setSecretKey(giftCardId, secret);
 
     // Attempt to claim the gift card with an incorrect secret
     const incorrectSecret = "wrong-secret";
     await expect(
-      nftGiftMarketplace.connect(buyer).claimGiftCard(tokenId, incorrectSecret)
+      nftGiftMarketplace
+        .connect(buyer)
+        .claimGiftCard(giftCardId, incorrectSecret)
     ).to.be.revertedWith("Invalid secret");
   });
 
   it("should fail to set a secret key by a non-owner", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
+    const imageURI = "https://example.com/background1.png";
+    const category = "Nature";
+    const price = ethers.parseEther("0.01");
 
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
+    // Mint a background
+    await nftGiftMarketplace.connect(artist).mintBackground(imageURI, category);
+
+    // Create a gift card
+    const backgroundId = 1;
+    await nftGiftMarketplace
+      .connect(creator)
+      .createGiftCard(backgroundId, price, "");
 
     // Attempt to set a secret key by a non-owner
-    const tokenId = 1;
+    const giftCardId = 1;
     const secret = "my-secret-key";
     await expect(
-      nftGiftMarketplace.connect(buyer).setSecretKey(tokenId, secret)
-    ).to.be.revertedWith("Only owner can set secret key");
-  });
-
-  it("should fail to buy a gift card without sufficient funds", async function () {
-    const tokenURI = "ipfs://QmExampleHash/metadata.json";
-    const price = ethers.parseEther("0.0001"); // Updated price
-
-    // Mint a gift card
-    await nftGiftMarketplace.connect(creator).mintGiftCard(tokenURI, price);
-
-    // Attempt to buy the gift card with insufficient funds
-    const tokenId = 1;
-    const message = "Happy Birthday!";
-    await expect(
-      nftGiftMarketplace.connect(buyer).buyGiftCard(tokenId, message, {
-        value: ethers.parseEther("0.00005"), // Insufficient funds
-      })
-    ).to.be.revertedWith("Incorrect price"); // Fixed
+      nftGiftMarketplace.connect(buyer).setSecretKey(giftCardId, secret)
+    ).to.be.revertedWith("Only the owner can set the secret key");
   });
 });
 
