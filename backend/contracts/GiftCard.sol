@@ -34,6 +34,7 @@ contract NFTGiftMarketplace is ERC721URIStorage, Ownable {
     mapping(uint256 => GiftCard) public giftCards; // Gift cards are stored in the contract
     mapping(uint256 => Background) public backgrounds; // Background NFTs
     mapping(bytes32 => bool) private hashUsed;
+    mapping(string => bool) private mintedURIs; // Track minted image URIs
 
     event BackgroundMinted(uint256 indexed backgroundId, address indexed artist, string imageURI, string category);
     event GiftCardCreated(uint256 indexed giftCardId, address indexed creator, uint256 price, uint256 backgroundId);
@@ -45,9 +46,17 @@ contract NFTGiftMarketplace is ERC721URIStorage, Ownable {
 
     // Function to mint a background as an NFT with a category
     function mintBackground(string memory imageURI, string memory category) external {
+<<<<<<< HEAD
         _backgroundIdCounter.increment();
         uint256 backgroundId = _backgroundIdCounter.current();
 
+=======
+        require(!mintedURIs[imageURI], "This background has already been minted");
+
+        _backgroundIdCounter.increment();
+        uint256 backgroundId = _backgroundIdCounter.current();
+
+>>>>>>> 73fa532244e868fa785b95e2be3489d8b74fac73
         _safeMint(msg.sender, backgroundId);
         _setTokenURI(backgroundId, imageURI);
 
@@ -58,6 +67,11 @@ contract NFTGiftMarketplace is ERC721URIStorage, Ownable {
             usageCount: 0
         });
 
+<<<<<<< HEAD
+=======
+        mintedURIs[imageURI] = true; // Mark this URI as minted
+
+>>>>>>> 73fa532244e868fa785b95e2be3489d8b74fac73
         emit BackgroundMinted(backgroundId, msg.sender, imageURI, category);
     }
 
@@ -155,4 +169,8 @@ contract NFTGiftMarketplace is ERC721URIStorage, Ownable {
     function tokenURI(uint256 tokenId) public view override(ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 73fa532244e868fa785b95e2be3489d8b74fac73
