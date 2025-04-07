@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Gift, Heart, Send } from 'lucide-react';
+import { X, Gift, Heart, Send, Plus } from 'lucide-react';
 import Button from '@/components/Button';
 import Navbar from '@/components/Navbar';
 
@@ -108,6 +108,7 @@ const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }
 
 const CategoryCards: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const navigate = useNavigate();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   // Mock data - In real app, this would come from your API
@@ -164,12 +165,22 @@ const CategoryCards: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          className="mb-12 flex justify-between items-center"
         >
-          <h1 className="text-3xl font-display font-medium text-white mb-2">
-            {getCategoryName(categoryId || '')}
-          </h1>
-          <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary rounded-full" />
+          <div>
+            <h1 className="text-3xl font-display font-medium text-white mb-2">
+              {getCategoryName(categoryId || '')}
+            </h1>
+            <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary rounded-full" />
+          </div>
+          
+          <Button
+            onClick={() => navigate('/create-background')}
+            className="flex items-center gap-2 bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl text-base font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+          >
+            <Plus className="w-5 h-5" />
+            Create Background
+          </Button>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

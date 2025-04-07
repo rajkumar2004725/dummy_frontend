@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Settings, LogOut, User } from 'lucide-react';
+import { Copy, Settings, LogOut, User, ImagePlus } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 
 interface AccountMenuProps {
@@ -77,6 +77,14 @@ const AccountMenu = ({ address }: AccountMenuProps) => {
 
           <button className="w-full py-2.5 px-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-center">
             Wrap/Unwrap RON
+          </button>
+
+          <button 
+            onClick={() => navigate('/create-background')}
+            className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity text-center flex items-center justify-center gap-2"
+          >
+            <ImagePlus className="w-4 h-4" />
+            Create Background
           </button>
         </div>
 

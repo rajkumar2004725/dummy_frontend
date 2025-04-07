@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { connectWallet } from '@/lib/wallet';
+import { toast } from 'sonner';
 
 interface WalletOption {
   id: string;
@@ -63,11 +65,20 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
   onOpenChange,
   onConnect
 }) => {
-  const handleWalletConnect = (wallet: WalletOption) => {
-    // TODO: Replace with actual wallet connection logic
-    const mockAddress = '0x2937...ee92';
-    onConnect?.(mockAddress);
-    onOpenChange(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const handleWalletConnect = async (wallet: WalletOption) => {
+    try {
+      setConnecting(true);
+      const address = await connectWallet(wallet.id);
+      onConnect?.(address);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to connect wallet');
+    } finally {
+      setConnecting(false);
+    }
   };
 
   return (
@@ -87,8 +98,9 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
             {walletOptions.map((wallet) => (
               <button
                 key={wallet.id}
-                className="flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left"
+                className="flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleWalletConnect(wallet)}
+                disabled={connecting}
               >
                 <div className="bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
                   {wallet.id === 'brave' ? (

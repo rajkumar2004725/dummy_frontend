@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Marketplace from "./pages/Marketplace";
 import CategoryCards from "./pages/CategoryCards";
 import CardDetail from "./pages/CardDetail";
+import CreateBackground from "./pages/CreateBackground";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/marketplace/:categoryId" element={<CategoryCards />} />
             <Route path="/marketplace/:categoryId/:cardId" element={<CardDetail />} />
+            <Route path="/create-background" element={<CreateBackground />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
