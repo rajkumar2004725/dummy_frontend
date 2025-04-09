@@ -11,7 +11,7 @@ const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
-  const { address, connect } = useWallet();
+  const { address, connect, disconnect } = useWallet();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -64,6 +64,9 @@ const Navbar = () => {
             </NavLink>
             <NavLink to="/claim" active={location.pathname === "/claim"}>
               Claim Gift
+            </NavLink>
+            <NavLink to="/create-background" active={location.pathname === "/create-background"}>
+              Create Background
             </NavLink>
           </div>
 
