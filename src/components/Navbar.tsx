@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Gift, ShoppingBag } from 'lucide-react';
+import { Gift, ShoppingBag, Wallet } from 'lucide-react';
 import WalletConnectDialog from './WalletConnectDialog';
 import AccountMenu from './AccountMenu';
 import Button from './Button';
 import { useWallet } from '@/contexts/WalletContext';
+import { toast } from 'react-hot-toast';
 
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const { address, connect, disconnect } = useWallet();
+  const [connecting, setConnecting] = useState(false);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -26,8 +28,21 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleConnect = (newAddress: string) => {
-    connect(newAddress);
+  const handleOpenWalletDialog = () => {
+    setWalletDialogOpen(true);
+  };
+
+  const handleConnect = async (newAddress: string) => {
+    try {
+      setConnecting(true);
+      await connect(newAddress);
+      toast.success('Wallet connected successfully!');
+    } catch (error: any) {
+      console.error('Wallet connection error:', error);
+      toast.error(error.message || 'Failed to connect wallet');
+    } finally {
+      setConnecting(false);
+    }
   };
 
   return (
@@ -75,8 +90,22 @@ const Navbar = () => {
             {address ? (
               <AccountMenu address={address} />
             ) : (
-              <Button onClick={() => setWalletDialogOpen(true)}>
-                Connect Wallet
+              <Button 
+                onClick={handleOpenWalletDialog} 
+                disabled={connecting}
+                className="flex items-center gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4" /> 
+                    Connect Wallet
+                  </>
+                )}
               </Button>
             )}
           </div>

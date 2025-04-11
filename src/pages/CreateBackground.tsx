@@ -109,6 +109,35 @@ const CreateBackground = () => {
     }
   };
 
+  // Function to handle wallet connection
+  const handleConnectWallet = async () => {
+    try {
+      toast.loading('Connecting wallet...');
+      
+      // For demo/development purposes - in production you'd use proper wallet connection
+      // Get the user wallet address from MetaMask or similar
+      const walletAddress = prompt('Enter your wallet address (for development purposes):');
+      
+      if (!walletAddress) {
+        toast.dismiss();
+        toast.error('No wallet address provided');
+        return;
+      }
+      
+      await connect(walletAddress);
+      
+      toast.dismiss();
+      toast.success('Wallet connected successfully!');
+      
+      // Now open the dialog if they were trying to create a background
+      setDialogOpen(true);
+    } catch (error: any) {
+      toast.dismiss();
+      toast.error(error.message || 'Failed to connect wallet');
+      console.error('Wallet connection error:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -227,7 +256,7 @@ const CreateBackground = () => {
 
         <div className="flex justify-center">
           <Button 
-            onClick={() => address ? setDialogOpen(true) : connect('your_wallet_address')} 
+            onClick={() => address ? setDialogOpen(true) : handleConnectWallet()} 
             className="bg-gradient-to-r from-primary to-secondary text-white py-4 px-8 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
           >
             {address ? 'Create New Background' : 'Connect Wallet First'}

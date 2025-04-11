@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -6,20 +7,78 @@ import Button from '@/components/Button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import WalletConnectDialog from '@/components/WalletConnectDialog';
-import { Heart, Send, Copy, Check, Gift, Wallet } from 'lucide-react';
+import { Heart, Send, Copy, Check, Gift, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createGiftCard } from '@/services/api';
+import { useWallet } from '@/contexts/WalletContext';
+
+// Add placeholder images for categories
+const DEFAULT_CATEGORY_IMAGES = {
+  'Birthday Cards': '/birthday.jpg',
+  'Wedding Cards': '/wedding.jpg',
+  'Holiday Cards': '/newyear.jpg',
+  'Love Cards': '/love.jpg',
+  'Thank You Cards': '/appreciation.jpg',
+  'Anniversary Cards': '/anniversary.jpg',
+  'default': '/placeholder.jpg'
+};
+
+// Function to properly handle image URLs
+const getImageUrl = (imageURI: string, category?: string): string => {
+  if (!imageURI) {
+    // Return default category image or generic placeholder
+    return category ? 
+      (DEFAULT_CATEGORY_IMAGES[category] || DEFAULT_CATEGORY_IMAGES['default']) : 
+      DEFAULT_CATEGORY_IMAGES['default'];
+  }
+  
+  if (imageURI.startsWith('http')) {
+    return imageURI;
+  } else if (imageURI.startsWith('/')) {
+    return `http://localhost:3001${imageURI}`;
+  } else {
+    return `http://localhost:3001/${imageURI}`;
+  }
+};
+
+interface LocationState {
+  backgroundId?: string;
+  backgroundPrice?: string;
+  backgroundImage?: string;
+}
 
 const CreateGift = () => {
-  const [view, setView] = useState('options'); // 'options', 'form', 'success'
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { backgroundId, backgroundPrice, backgroundImage } = location.state as LocationState || {};
+  const { address, isConnected, connect } = useWallet();
+
+  const [view, setView] = useState(backgroundId ? 'form' : 'options'); // 'options', 'form', 'success'
   const [giftDetails, setGiftDetails] = useState({
     recipientName: '',
     yourName: '',
     message: '',
   });
   const [secretCode, setSecretCode] = useState('');
+  const [transactionHash, setTransactionHash] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
+  
+  useEffect(() => {
+    // If no background was selected, and the user navigated directly to this page
+    if (!backgroundId && view === 'form') {
+      toast.error('Please select a background first');
+      setView('options');
+    }
+  }, [backgroundId, view]);
+  
+  // Skip wallet options if already connected
+  useEffect(() => {
+    if (view === 'options' && isConnected) {
+      toast.success('Wallet connected: ' + address?.slice(0, 6) + '...' + address?.slice(-4));
+    }
+  }, [view, isConnected, address]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -29,31 +88,54 @@ const CreateGift = () => {
     }));
   };
   
-  const handleCreateGift = (e: React.FormEvent) => {
+  const handleCreateGift = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if wallet is connected
+    if (!isConnected) {
+      toast.error('Please connect your wallet first');
+      setWalletDialogOpen(true);
+      return;
+    }
     
     // Validate form
     if (!giftDetails.recipientName || !giftDetails.yourName || !giftDetails.message) {
       toast.error('Please fill in all fields');
       return;
     }
+
+    if (!backgroundId) {
+      toast.error('No background selected. Please go back and select a background.');
+      return;
+    }
     
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Generate random secret code
-      const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      setSecretCode(generatedCode);
-      setLoading(false);
+    try {
+      // Call API to create gift card
+      const result = await createGiftCard({
+        backgroundId,
+        price: backgroundPrice || '0.01',
+        message: `To: ${giftDetails.recipientName}\nFrom: ${giftDetails.yourName}\n\n${giftDetails.message}`
+      });
+      
+      // Set success data
+      setSecretCode(result.id.toString());
+      setTransactionHash(result.transactionHash || '');
       setView('success');
-    }, 1500);
+      toast.success('Gift card created successfully!');
+    } catch (error) {
+      console.error('Error creating gift card:', error);
+      toast.error('Failed to create gift card. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(secretCode);
     setCopied(true);
-    toast.success('Secret code copied to clipboard!');
+    toast.success('Gift card ID copied to clipboard!');
     
     setTimeout(() => {
       setCopied(false);
@@ -67,7 +149,22 @@ const CreateGift = () => {
       message: '',
     });
     setSecretCode('');
+    setTransactionHash('');
     setView('options');
+  };
+  
+  // Add wallet connect handler
+  const handleWalletConnect = async (newAddress: string) => {
+    try {
+      // Connect wallet using the context
+      await connect(newAddress);
+      
+      // Wallet connected successfully
+      toast.success('Wallet connected: ' + newAddress.slice(0, 6) + '...' + newAddress.slice(-4));
+    } catch (error) {
+      console.error('Error in wallet connection:', error);
+      toast.error('Failed to connect wallet');
+    }
   };
   
   return (
@@ -106,45 +203,53 @@ const CreateGift = () => {
                 </div>
                 
                 <div className="flex flex-col items-center space-y-6">
-                  <div className="w-full flex justify-center gap-4">
-                    <motion.div 
-                      whileHover={{ y: -5 }}
-                      className="flex-1 max-w-xs"
-                    >
-                      <Button
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        className="h-14 text-lg bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white font-medium shadow-xl shadow-primary/20"
-                        icon={<Wallet className="w-5 h-5" />}
-                        onClick={() => toast.info('Create wallet feature coming soon!')}
-                      >
-                        Create a Wallet
-                      </Button>
-                    </motion.div>
-                    
-                    <motion.div 
-                      whileHover={{ y: -5 }}
-                      className="flex-1 max-w-xs"
-                    >
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        fullWidth
-                        className="h-14 text-lg border-white/30 bg-white/10 text-white hover:bg-white/20 font-medium shadow-xl"
-                        icon={<Wallet className="w-5 h-5" />}
-                        onClick={() => setWalletDialogOpen(true)}
-                      >
-                        Connect a Wallet
-                      </Button>
-                    </motion.div>
-                  </div>
+                  {!isConnected ? (
+                    <>
+                      <div className="w-full flex justify-center gap-4">
+                        <motion.div 
+                          whileHover={{ y: -5 }}
+                          className="flex-1 max-w-xs"
+                        >
+                          <Button
+                            variant="primary"
+                            size="lg"
+                            fullWidth
+                            className="h-14 text-lg bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white font-medium shadow-xl shadow-primary/20"
+                            icon={<Wallet className="w-5 h-5" />}
+                            onClick={() => toast.info('Create wallet feature coming soon!')}
+                          >
+                            Create a Wallet
+                          </Button>
+                        </motion.div>
+                        
+                        <motion.div 
+                          whileHover={{ y: -5 }}
+                          className="flex-1 max-w-xs"
+                        >
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            fullWidth
+                            className="h-14 text-lg border-white/30 bg-white/10 text-white hover:bg-white/20 font-medium shadow-xl"
+                            icon={<Wallet className="w-5 h-5" />}
+                            onClick={() => setWalletDialogOpen(true)}
+                          >
+                            Connect a Wallet
+                          </Button>
+                        </motion.div>
+                      </div>
+                      
+                      <div className="text-center text-base text-white/80">
+                        Create a wallet with <span className="font-medium text-white">Face ID</span> or <span className="font-medium text-white">Touch ID</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-base text-white">
+                      Wallet connected: <span className="font-medium text-primary">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                    </div>
+                  )}
                   
-                  <div className="text-center text-base text-white/80">
-                    Create a wallet with <span className="font-medium text-white">Face ID</span> or <span className="font-medium text-white">Touch ID</span>
-                  </div>
-                  
-                  <div className="pt-16 pb-8 w-full">
+                  <div className="pt-8 pb-8 w-full">
                     <h2 className="text-3xl font-display font-medium text-center mb-10 text-white">
                       Make Gift Giving Special
                     </h2>
@@ -159,9 +264,9 @@ const CreateGift = () => {
                         fullWidth
                         className="h-14 text-lg bg-gradient-to-r from-secondary/90 to-primary/90 hover:from-secondary hover:to-primary text-white font-medium shadow-xl shadow-secondary/20"
                         icon={<Gift className="w-5 h-5" />}
-                        onClick={() => setView('form')}
+                        onClick={() => navigate('/marketplace')}
                       >
-                        Create Gift Pack
+                        Choose Background First
                       </Button>
                     </motion.div>
                   </div>
@@ -183,12 +288,27 @@ const CreateGift = () => {
                   </div>
                   
                   <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3 text-white">
-                    Create a Gift
+                    Create a Gift Card
                   </h1>
                   <p className="text-gray-300">
                     Send a special gift with a personalized message
                   </p>
                 </div>
+                
+                {backgroundImage && (
+                  <div className="mb-8 rounded-xl overflow-hidden">
+                    <img 
+                      src={getImageUrl(backgroundImage)}
+                      alt="Selected background" 
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="bg-white/5 p-4 text-center">
+                      <p className="text-gray-300">
+                        Selected background - Price: {backgroundPrice} ETH
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="glass-card rounded-xl p-8">
                   <form onSubmit={handleCreateGift} className="space-y-6">
@@ -240,7 +360,7 @@ const CreateGift = () => {
                     <div className="flex gap-4">
                       <Button 
                         variant="outline" 
-                        onClick={() => setView('options')} 
+                        onClick={() => navigate('/marketplace')} 
                         className="flex-1 border-white/20 bg-white/5 text-white hover:bg-white/10"
                       >
                         Back
@@ -248,11 +368,18 @@ const CreateGift = () => {
                       
                       <Button 
                         type="submit" 
-                        loading={loading}
-                        icon={<Send className="w-4 h-4" />}
-                        className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                        variant="primary"
+                        className="flex-1 bg-gradient-to-r from-primary to-secondary text-white"
+                        disabled={loading}
                       >
-                        {loading ? 'Creating Gift...' : 'Create Gift'}
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          'Create Gift Card'
+                        )}
                       </Button>
                     </div>
                   </form>
@@ -260,82 +387,65 @@ const CreateGift = () => {
               </motion.div>
             ) : (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
                 className="text-center"
               >
-                <div className="glass-card rounded-xl p-10 space-y-8">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                    className="w-24 h-24 mx-auto relative"
-                  >
-                    <div className="absolute inset-0 bg-secondary/20 rounded-full animate-pulse-slow" />
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <Gift className="w-12 h-12 text-secondary" />
-                    </div>
-                  </motion.div>
-                  
-                  <div className="space-y-2">
-                    <h2 className="text-3xl font-display font-medium text-white">Gift Created!</h2>
-                    <p className="text-gray-300 max-w-md mx-auto">
-                      Share this secret code with {giftDetails.recipientName} so they can claim their gift.
-                    </p>
+                <div className="w-24 h-24 mx-auto mb-8 relative">
+                  <div className="absolute inset-0 bg-green-500/30 rounded-full animate-pulse-slow" />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <Check className="w-12 h-12 text-green-500" />
+                  </div>
+                </div>
+                
+                <h1 className="text-3xl sm:text-4xl font-display font-medium mb-3 text-white">
+                  Gift Card Created!
+                </h1>
+                <p className="text-gray-300 mb-8">
+                  Your gift has been created and is ready to be claimed
+                </p>
+                
+                <div className="glass-card rounded-xl p-8 mb-8 max-w-md mx-auto">
+                  <h2 className="text-xl font-medium text-white mb-4">Gift Card ID</h2>
+                  <div className="bg-white/5 rounded-lg p-4 mb-6 flex items-center justify-between">
+                    <span className="text-primary font-mono text-lg">{secretCode}</span>
+                    <Button 
+                      size="sm"
+                      variant="ghost"
+                      onClick={copyToClipboard}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </Button>
                   </div>
                   
-                  <div className="max-w-sm mx-auto">
-                    <div 
-                      className="p-4 bg-white/5 border border-white/10 rounded-lg font-mono text-xl flex items-center justify-between text-white"
-                      role="button"
-                      onClick={copyToClipboard}
-                    >
-                      <span>{secretCode}</span>
-                      <button 
-                        type="button" 
-                        className="p-2 hover:bg-white/10 rounded-md transition-colors"
-                        aria-label="Copy to clipboard"
+                  {transactionHash && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium text-white mb-2">Transaction Details</h3>
+                      <a 
+                        href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 text-sm break-all"
                       >
-                        {copied ? (
-                          <Check className="w-5 h-5 text-green-400" />
-                        ) : (
-                          <Copy className="w-5 h-5 text-white" />
-                        )}
-                      </button>
+                        View on Etherscan: {transactionHash}
+                      </a>
                     </div>
-                  </div>
+                  )}
                   
-                  <div className="p-6 bg-white/5 border border-white/10 rounded-lg max-w-md mx-auto text-left">
-                    <p className="text-sm text-gray-400 mb-2">Gift Preview:</p>
-                    <p className="text-base text-white">
-                      <span className="font-medium text-gray-300">To:</span> {giftDetails.recipientName}
-                    </p>
-                    <p className="text-base text-white">
-                      <span className="font-medium text-gray-300">From:</span> {giftDetails.yourName}
-                    </p>
-                    <p className="text-base mt-2 text-white">
-                      {giftDetails.message}
-                    </p>
-                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed mb-6">
+                    Share this ID with the recipient so they can claim their gift.
+                    The gift card will be available for claiming immediately.
+                  </p>
                   
-                  <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={resetForm}
-                      className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-                    >
-                      Create Another Gift
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      icon={<Copy className="w-4 h-4" />}
-                      onClick={copyToClipboard}
-                      className="bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90"
-                    >
-                      {copied ? 'Copied!' : 'Copy Secret Code'}
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={resetForm}
+                    className="w-full bg-gradient-to-r from-primary to-secondary text-white"
+                  >
+                    Create Another Gift
+                  </Button>
                 </div>
               </motion.div>
             )}
@@ -343,11 +453,10 @@ const CreateGift = () => {
         </div>
       </div>
       
-      <Footer />
-      
-      <WalletConnectDialog 
-        open={walletDialogOpen} 
-        onOpenChange={setWalletDialogOpen} 
+      <WalletConnectDialog
+        open={walletDialogOpen}
+        onOpenChange={setWalletDialogOpen}
+        onConnect={handleWalletConnect}
       />
     </div>
   );

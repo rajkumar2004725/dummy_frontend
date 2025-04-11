@@ -1,30 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Gift, Heart, Send, Plus } from 'lucide-react';
+import { X, Gift, Heart, Send, Plus, Loader2 } from 'lucide-react';
 import Button from '@/components/Button';
 import Navbar from '@/components/Navbar';
-
-interface Card {
-  id: string;
-  title: string;
-  image: string;
-  price: number;
-  creator: string;
-  creatorEarnings: string;
-  description: string;
-  previewImage: string;
-}
+import CategoryNav from '@/components/CategoryNav';
+import BackgroundGallery from '@/components/BackgroundGallery';
+import { Background } from '@/services/api';
+import { eventBus, BackgroundUpdatedEvent } from '@/services/eventBus';
+import { useBackgroundsStore } from '@/services/store';
 
 interface CardModalProps {
-  card: Card | null;
+  background: Background | null;
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (card: Card) => void;
+  onSelect: (background: Background) => void;
 }
 
-const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }) => {
-  if (!card) return null;
+const CardModal: React.FC<CardModalProps> = ({ background, isOpen, onClose, onSelect }) => {
+  if (!background) return null;
+
+  // Convert imageURI to a full URL if it's just a relative path
+  const imageUrl = background.imageURI.startsWith('http') 
+    ? background.imageURI 
+    : `http://localhost:3001/${background.imageURI}`;
 
   return (
     <AnimatePresence>
@@ -52,8 +51,8 @@ const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }
               <div className="h-72 relative">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B14] to-transparent z-10" />
                 <img
-                  src={card.previewImage || card.image}
-                  alt={card.title}
+                  src={imageUrl}
+                  alt={background.category}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -62,19 +61,19 @@ const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h3 className="text-3xl font-display font-medium text-white mb-2">
-                      {card.title}
+                      {background.category}
                     </h3>
                     <p className="text-gray-400 text-lg">
-                      Created by {card.creator}
+                      Created by {background.artistAddress.slice(0, 6)}...{background.artistAddress.slice(-4)}
                     </p>
                   </div>
                   <div className="bg-primary/20 px-6 py-3 rounded-full">
-                    <span className="text-primary font-medium text-lg">${card.price}</span>
+                    <span className="text-primary font-medium text-lg">{background.price} ETH</span>
                   </div>
                 </div>
 
                 <p className="text-gray-300 text-lg leading-relaxed mb-8">
-                  {card.description}
+                  Beautiful background from our {background.category} collection. Use this to create a unique gift card that will be minted on the blockchain.
                 </p>
 
                 <div className="bg-white/5 rounded-xl p-6 mb-8">
@@ -82,20 +81,26 @@ const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }
                   <ul className="space-y-3 text-base text-gray-300">
                     <li className="flex justify-between items-center">
                       <span>Creator Earnings</span>
-                      <span className="text-primary font-medium">{card.creatorEarnings}</span>
+                      <span className="text-primary font-medium">40%</span>
                     </li>
                     <li className="flex justify-between items-center">
                       <span>Platform Fee</span>
                       <span className="text-secondary font-medium">60%</span>
                     </li>
+                    {background.blockchainId && (
+                      <li className="flex justify-between items-center">
+                        <span>Blockchain ID</span>
+                        <span className="text-secondary font-medium">#{background.blockchainId}</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
 
                 <Button
-                  onClick={() => onSelect(card)}
+                  onClick={() => onSelect(background)}
                   className="w-full bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
                 >
-                  Select This Card
+                  Create Gift Card
                 </Button>
               </div>
             </div>
@@ -109,47 +114,87 @@ const CardModal: React.FC<CardModalProps> = ({ card, isOpen, onClose, onSelect }
 const CategoryCards: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [selectedBackground, setSelectedBackground] = useState<Background | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Mock data - In real app, this would come from your API
-  const cards: Card[] = [
-    {
-      id: '1',
-      title: 'Happy Birthday Bloom',
-      image: '/images/cards/birthday-1.jpg',
-      previewImage: '/images/cards/birthday-1-preview.gif',
-      price: 1.60,
-      creator: 'Artist Name',
-      creatorEarnings: '40%',
-      description: 'A beautiful digital birthday card with animated flowers that bloom as your message is revealed.'
-    },
-    {
-      id: '2',
-      title: 'Celebration Time',
-      image: '/images/cards/birthday-2.jpg',
-      previewImage: '/images/cards/birthday-2-preview.gif',
-      price: 1.80,
-      creator: 'Artist Name',
-      creatorEarnings: '40%',
-      description: 'Dynamic celebration card with confetti animation that bursts into life when opened.'
+  // Use the backgrounds store
+  const { 
+    backgroundsByCategory, 
+    isLoading, 
+    error, 
+    fetchCategoryBackgrounds, 
+    fetchAllBackgrounds,
+    addBackground,
+    updateBackground 
+  } = useBackgroundsStore();
+
+  // Get the backgrounds for the current category
+  const backgrounds = selectedCategory 
+    ? backgroundsByCategory[selectedCategory] || []
+    : [];
+
+  useEffect(() => {
+    // Fetch all backgrounds on first load to populate categories
+    fetchAllBackgrounds();
+  }, []);
+  
+  useEffect(() => {
+    // Set the selected category from URL param
+    if (categoryId) {
+      const decodedCategory = decodeURIComponent(categoryId);
+      setSelectedCategory(decodedCategory);
+      // Fetch backgrounds for this category if not already loaded
+      fetchCategoryBackgrounds(decodedCategory);
     }
-  ];
-
-  const getCategoryName = (id: string): string => {
-    const names: { [key: string]: string } = {
-      'birthday': 'Birthday Cards',
-      'wedding': 'Wedding Cards',
-      'newyear': 'New Year Cards',
-      'love': 'Love & Romance Cards',
-      'appreciation': 'Appreciation Cards',
-      'trading-sentiments': 'Trading Sentiment Cards'
+  }, [categoryId]);
+  
+  useEffect(() => {
+    // Subscribe to background update events
+    const unsubscribe = eventBus.onBackgroundUpdated(handleBackgroundChange);
+    
+    // Clean up event listener on component unmount
+    return () => {
+      unsubscribe();
     };
-    return names[id] || 'Cards';
+  }, [selectedCategory]);
+  
+  // Handler for background changes
+  const handleBackgroundChange = (data: BackgroundUpdatedEvent) => {
+    console.log('Background change detected:', data);
+    
+    // Only refresh if we're in the same category as the changed background
+    // or if no category is selected yet
+    if (data.background && data.background.category && 
+        (!selectedCategory || data.background.category === selectedCategory)) {
+      
+      if (data.action === 'added') {
+        // Add the new background to our store
+        addBackground(data.background);
+      } else if (data.action === 'updated') {
+        // Update the existing background in our store
+        updateBackground(data.background);
+      }
+    }
   };
 
-  const handleCardSelect = (card: Card) => {
-    // Handle card selection - navigate to personalization page
-    console.log('Selected card:', card);
+  const handleCardSelect = (background: Background) => {
+    // Navigate to create gift page with background
+    navigate(`/create-gift`, { 
+      state: { 
+        backgroundId: background.id,
+        backgroundPrice: background.price,
+        backgroundImage: background.imageURI.startsWith('http') 
+          ? background.imageURI 
+          : `http://localhost:3001/${background.imageURI}`
+      } 
+    });
+  };
+
+  // Handle category selection
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    // Update URL to reflect the selected category
+    navigate(`/categories/${encodeURIComponent(category)}`);
   };
 
   return (
@@ -169,7 +214,7 @@ const CategoryCards: React.FC = () => {
         >
           <div>
             <h1 className="text-3xl font-display font-medium text-white mb-2">
-              {getCategoryName(categoryId || '')}
+              {selectedCategory ? selectedCategory : 'Backgrounds'}
             </h1>
             <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary rounded-full" />
           </div>
@@ -183,52 +228,27 @@ const CategoryCards: React.FC = () => {
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cards.map((card, index) => (
-            <motion.div
-              key={card.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group cursor-pointer"
-              onClick={() => setSelectedCard(card)}
-            >
-              <div className="relative rounded-xl overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
-                <div className="relative h-48">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute top-4 right-4 bg-black/30 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-medium">
-                    ${card.price}
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-medium text-white mb-2 group-hover:text-primary transition-colors">
-                    {card.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm line-clamp-2 mb-4">
-                    {card.description}
-                  </p>
-                  
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">By {card.creator}</span>
-                    <span className="text-primary font-medium">{card.creatorEarnings} royalty</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {/* Category Navigation */}
+        <CategoryNav 
+          categories={Object.keys(backgroundsByCategory)}
+          selectedCategory={selectedCategory} 
+          onSelectCategory={handleCategorySelect} 
+        />
+
+        {/* Background Gallery using our reusable component */}
+        <BackgroundGallery
+          backgrounds={backgrounds}
+          isLoading={isLoading}
+          error={error}
+          onSelectBackground={setSelectedBackground}
+          emptyStateMessage={`No backgrounds found in ${selectedCategory || 'this category'}`}
+        />
       </div>
 
       <CardModal
-        card={selectedCard}
-        isOpen={!!selectedCard}
-        onClose={() => setSelectedCard(null)}
+        background={selectedBackground}
+        isOpen={!!selectedBackground}
+        onClose={() => setSelectedBackground(null)}
         onSelect={handleCardSelect}
       />
     </div>

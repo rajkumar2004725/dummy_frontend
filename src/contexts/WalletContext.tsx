@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3001';
+import { API_BASE_URL } from '../services/api';
 
 interface WalletContextType {
   address: string | null;
@@ -19,8 +18,24 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     return saved || null;
   });
 
+  // Load token and address when component mounts
+  useEffect(() => {
+    // Check if we have a token and wallet address in localStorage
+    const token = localStorage.getItem('token');
+    const savedAddress = localStorage.getItem('walletAddress');
+    
+    // If we have both, consider the user already connected
+    if (token && savedAddress) {
+      setAddress(savedAddress);
+      console.log('Wallet reconnected from storage:', savedAddress);
+    }
+  }, []);
+
   const connect = async (newAddress: string) => {
     try {
+      console.log('Connecting wallet address:', newAddress);
+      console.log('Using API URL:', API_BASE_URL);
+      
       // In a real app, you'd sign a message and verify with backend
       // For now, we'll simulate a login API call
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
@@ -28,6 +43,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         // In a real app, this would be a proper signature
         signature: `mock_signature_for_${newAddress}`
       });
+      
+      if (!response.data || !response.data.token) {
+        throw new Error('Invalid response from auth server');
+      }
       
       const { token } = response.data;
       
@@ -37,9 +56,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('token', token);
       
       console.log('Connected with token:', token);
-    } catch (error) {
+      return;
+    } catch (error: any) {
       console.error('Wallet connection error:', error);
-      throw new Error('Failed to connect wallet');
+      
+      // Check if there's a response message to provide better errors
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to connect wallet';
+      
+      throw new Error(errorMessage);
     }
   };
 
@@ -51,7 +78,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const getToken = () => {
     const token = localStorage.getItem('token');
-    console.log('Getting token:', token);
     return token;
   };
 
